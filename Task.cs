@@ -1,6 +1,6 @@
 ﻿namespace ToDoApp
 {
-    internal class Task
+    public class Task
     {
         public string Title { get; set; }
         public bool IsDone { get; set; }
