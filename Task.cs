@@ -13,7 +13,7 @@
 
         public override string ToString()
         {
-            return $"{(this.IsDone ? "[V]" : "[X]")} | {this.Title}";
+            return $"{(this.IsDone ? "[Выполнено]" : "[Не выполнено]")} | {this.Title}";
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using System.Threading;
 using Newtonsoft.Json;
 
 namespace ToDoApp
@@ -7,9 +6,10 @@ namespace ToDoApp
     class Program
     {
         List<Task> tasks = new List<Task>();
+        Random rnd = new Random();
         private readonly string todoFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tasks.json");
 
-        private static void Setup()
+        private void Setup()
         {
             Console.InputEncoding = Encoding.Unicode;
             Console.OutputEncoding = Encoding.Unicode;
@@ -17,7 +17,31 @@ namespace ToDoApp
             Console.Title = "TODO app";
             Console.CursorVisible = false;
 
+            try
+            {
+                int windowWidth = 70;
+                int windowHeight = 20;
+
+                Console.WindowWidth = windowWidth;
+                Console.BufferWidth = windowWidth;
+                Console.WindowHeight = windowHeight;
+                Console.BufferHeight = windowHeight;
+            }
+            catch(Exception ex)
+            {
+                Alert(ex.ToString());
+            }
+
             Console.Clear();
+        }
+
+
+        private static void CenterText(string text)
+        {
+            int indent = ((Console.WindowWidth - 1) - text.Length) / 2;
+            string centered = text.PadLeft(indent + text.Length);
+            string full = centered.PadRight(Console.WindowWidth - 1);
+            Console.WriteLine(full);
         }
 
 
@@ -33,27 +57,40 @@ namespace ToDoApp
                 "[x]  Выйти"
             };
 
+            Console.Clear();
+            StageTitle("Главное меню");
+            CenterText("Используйте ↑ и ↓ для перемещения по меню.");
+            CenterText("Чтобы перейти дальше, нажмите Enter.");
+            Console.WriteLine();
+
+            int menuStartRow = Console.CursorTop;
+
             while (true)
             {
-                Console.Clear();
-
-                StageTitle("Главное меню");
-                Console.WriteLine("Используйте ↑ и ↓ для перемещения по меню.");
-                Console.WriteLine("Чтобы перейти дальше, нажмите Enter.\n");
+                Console.SetCursorPosition(0, menuStartRow);
 
                 for (int i = 0; i < options.Length; i++)
                 {
                     if (i == selectedIndex)
                     {
-                        Console.BackgroundColor = ConsoleColor.White;
-                        Console.ForegroundColor = ConsoleColor.Black;
+                        if (i == options.Length - 1)
+                        {
+                            Console.BackgroundColor = ConsoleColor.Red;
+                            Console.ForegroundColor = ConsoleColor.White;
+                        }
+                        else
+                        {
+                            Console.BackgroundColor = ConsoleColor.White;
+                            Console.ForegroundColor = ConsoleColor.Black;
+                        }
 
-                        Console.WriteLine($"   > {options[i]} <   ");
+                        CenterText($"> {options[i]} <");
                         Console.ResetColor();
                     }
                     else
                     {
-                        Console.WriteLine($"   {options[i]}   ");
+                        // Обычный вид невыбранных пунктов
+                        CenterText($"{options[i]}");
                     }
                 }
 
@@ -70,6 +107,7 @@ namespace ToDoApp
                 }
                 else if (key.Key == ConsoleKey.Enter)
                 {
+                    Console.Clear();
                     switch (selectedIndex)
                     {
                         case 0: AddTask(); break;
@@ -78,6 +116,11 @@ namespace ToDoApp
                         case 3: ShowAllTasks(); break;
                         case 4: return;
                     }
+                    Console.Clear();
+                    StageTitle("Главное меню");
+                    CenterText("Используйте ↑ и ↓ для перемещения по меню.");
+                    CenterText("Чтобы перейти дальше, нажмите Enter.\n");
+                    menuStartRow = Console.CursorTop;
                 }
             }
         }
@@ -109,14 +152,41 @@ namespace ToDoApp
             else if (TaskAlreadyExist)
             {
                 Alert("Задача с таким названием уже существует.");
+                Thread.Sleep(1900);
                 return;
             }
 
             tasks.Add(new Task(Title, false));
             SaveTasks();
             Console.Clear();
-            Success($"Задача \"{Title}\" добавлена.");
-            Thread.Sleep(2000);
+
+            string[] hints =
+            {
+                "используй метод Помидора: 25 минут работы, 5 минут отдыха.",
+                "разбивай большие задачи на маленькие подпункты.",
+                "проверяй список задач каждое утро перед началом работы.",
+                "регулярно удаляй задачи, которые потеряли актуальность.",
+                "не держи задачи в голове — записывай всё в TODO app."
+            };
+
+            string randomHint = hints[rnd.Next(hints.Length)];
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            CenterText("┌───────────────────────────────────────────────┐");
+            CenterText("│           Задача успешно добавлена!           │");
+            CenterText("└───────────────────────────────────────────────┘");
+            Console.ResetColor();
+            Console.WriteLine();
+            
+            Console.Write($"> Совет: ");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(randomHint);
+            Console.ResetColor();
+
+            CenterText("\nНажмите любую клавишу, чтобы вернуться в меню...");
+
+            Console.ReadKey(true);
+            //Thread.Sleep(2000);
         }
 
 
@@ -128,61 +198,45 @@ namespace ToDoApp
                 StageTitle("Удалить задачу");
 
                 int i = 0;
-                if (tasks.Count > 0)
+                CenterText("Какую задачу вы хотите удалить?\n");
+                foreach (var task in tasks)
                 {
-                    Console.WriteLine("Какую задачу вы хотите удалить?\n");
-                    foreach (var task in tasks)
-                    {
-                        i++;
-                        Console.WriteLine($"{i} - {task.Title}");
-                    }
-                    Console.WriteLine("q - назад в меню");
-                    Console.Write("\n--> ");
-                    string input = Console.ReadLine();
-
-                    if (input.ToLower() == "q")
-                    {
-                        Console.Clear();
-                        return;
-                    }
-
-                    if (int.TryParse(input, out int TaskNum))
-                    {
-                        int index = TaskNum - 1;
-
-                        if (index >= 0 && index < tasks.Count)
-                        {
-                            Success($"Задача \"{tasks[index].Title}\" удалена успешно");
-                            Thread.Sleep(1500);
-                            tasks.Remove(tasks[index]);
-                            SaveTasks();
-                        }
-                        else
-                        {
-                            Console.Clear();
-                            Alert("Задачи с таким номером не существует.");
-                            Console.WriteLine("> Попробуйте ещё раз ...");
-                            Thread.Sleep(2000);
-                        }
-                    }
+                    i++;
+                    CenterText($"{i} - {task.Title}");
                 }
-                else
+                CenterText("q - назад в меню");
+                Console.Write("\n--> ");
+                string input = Console.ReadLine();
+
+                if (input.ToLower() == "q")
                 {
                     Console.Clear();
-
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("┌───────────────────────────────────────────────┐");
-                    Console.WriteLine("│          Похоже, у вас ещё нет задач          │");
-                    Console.WriteLine("└───────────────────────────────────────────────┘");
-                    Console.ResetColor();
-
-                    Console.WriteLine("\nЧтобы начать работу:");
-                    Console.Write("> Перейдите в меню и выберите ");
-
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine("\"Добавить задачу\"");
-                    Console.ResetColor();
+                    return;
                 }
+
+                if (int.TryParse(input, out int TaskNum))
+                {
+                    int index = TaskNum - 1;
+
+                    if (index >= 0 && index < tasks.Count)
+                    {
+                        Success($"Задача \"{tasks[index].Title}\" удалена успешно");
+                        Thread.Sleep(1500);
+                        tasks.Remove(tasks[index]);
+                        SaveTasks();
+                    }
+                    else
+                    {
+                        Console.Clear();
+                        Alert("Задачи с таким номером не существует.");
+                        CenterText("> Попробуйте ещё раз ...");
+                        Thread.Sleep(2000);
+                    }
+                }
+            }
+            else
+            {
+                NoTasks();
             }
         }
 
@@ -195,13 +249,13 @@ namespace ToDoApp
             int i = 0;
             if (tasks.Count > 0)
             {
-                Console.WriteLine("Для какой задачи изменить статус?\n");
+                CenterText("Для какой задачи изменить статус?\n");
                 foreach (var task in tasks)
                 {
                     i++;
-                    Console.WriteLine($"{i} - {task.Title}");
+                    CenterText($"{i} - {task.Title}");
                 }
-                Console.WriteLine("q - назад в меню");
+                CenterText("q - назад в меню");
                 Console.Write("\n--> ");
                 string input = Console.ReadLine();
 
@@ -247,23 +301,9 @@ namespace ToDoApp
             }
             else
             {
-                Console.Clear();
-
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("┌───────────────────────────────────────────────┐");
-                Console.WriteLine("│          Похоже, у вас ещё нет задач          │");
-                Console.WriteLine("└───────────────────────────────────────────────┘");
-                Console.ResetColor();
-
-                Console.WriteLine("\nЧтобы начать работу:");
-                Console.Write("> Перейдите в меню и выберите ");
-
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("\"Добавить задачу\"");
-                Console.ResetColor();
+                NoTasks();
             }
-            Thread.Sleep(2000);
-            //Console.ReadLine();
+            Thread.Sleep(1900);
             Console.Clear();
         }
 
@@ -273,45 +313,89 @@ namespace ToDoApp
             Console.Clear();
             StageTitle("Все задачи");
 
-            int i = 0;
             if (tasks.Count > 0)
             {
+                int i = 0;
+                bool hasDone = tasks.Any(t => t.IsDone);
+                bool hasNotDone = tasks.Any(t => !t.IsDone);
+
+                Console.ForegroundColor = ConsoleColor.DarkGreen;
+                CenterText("Выполненые задачи:");
+                Console.ResetColor();
+
+                if (!hasDone) CenterText("Здесь пока ничего нет...");
+
                 foreach (var task in tasks)
                 {
-                    i++;
-                    Console.WriteLine($"{i}. {task}");
+                    if (task.IsDone)
+                    {
+                        i++;
+                        CenterText($"{i}. {task.Title}");
+                    }
                 }
-                Console.WriteLine("\nНажмите любую клавишу, чтобы выйти в меню . . .");
+
+                Console.WriteLine();
+                Console.WriteLine(new string('─', Console.WindowWidth - 1));
+                Console.WriteLine();
+
+                Console.ForegroundColor = ConsoleColor.DarkRed;
+                CenterText("Не выполненные задачи:");
+                Console.ResetColor();
+
+                if (!hasNotDone) CenterText("Здесь пока ничего нет...");
+
+                i = 0;
+                foreach (var task in tasks)
+                {
+                    if (!task.IsDone)
+                    {
+                        i++;
+                        CenterText($"{i}. {task.Title}");
+                    }
+                }
+
+                Console.WriteLine();
+                Console.Write("\nНажмите любую клавишу, чтобы выйти в меню . . .");
+                Console.ReadKey(true);
             }
             else
             {
-                Console.Clear();
-
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("┌───────────────────────────────────────────────┐");
-                Console.WriteLine("│          Похоже, у вас ещё нет задач          │");
-                Console.WriteLine("└───────────────────────────────────────────────┘");
-                Console.ResetColor();
-
-                Console.WriteLine("\nЧтобы начать работу:");
-                Console.Write("> Перейдите в меню и выберите ");
-
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("\"Добавить задачу\"");
-                Console.ResetColor();
+                NoTasks();
             }
-            Console.ReadKey(true);
             Console.Clear();
+        }
+
+        public static void NoTasks()
+        {
+            Console.Clear();
+
+            Console.ForegroundColor = ConsoleColor.Red;
+            CenterText("┌───────────────────────────────────────────────┐");
+            CenterText("│          Похоже, у вас ещё нет задач          │");
+            CenterText("└───────────────────────────────────────────────┘");
+            Console.ResetColor();
+
+            CenterText("\nЧтобы начать работу:");
+            Console.WriteLine("> Нажмите любую клавишу, чтобы выйти в меню;");
+            Console.Write("> Выберите пункт ");
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.Write("\"Добавить задачу\"");
+            Console.ResetColor();
+            Console.Write(";");
+
+            Console.ReadKey(true);
         }
 
 
         private void StageTitle(string title)
         {
-            Console.BackgroundColor = ConsoleColor.Magenta;
+            Console.BackgroundColor = ConsoleColor.DarkBlue;
             Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine($"======>   {title.ToUpper()}   <======\n");
+            CenterText($"======>   {title.ToUpper()}   <======");
             Console.ResetColor();
-            
+
+            Console.WriteLine();
         }
 
 
@@ -328,7 +412,7 @@ namespace ToDoApp
         {
             Console.BackgroundColor = ConsoleColor.DarkGreen;
             Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine($"[!] {message}");
+            Console.Write($"[!] {message}");
             Console.ResetColor();
         }
 
@@ -341,33 +425,30 @@ namespace ToDoApp
 
         private void LoadTasks()
         {
-            Console.Write($"В поисках файла: ");
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.Write(todoFile);
-            Console.ResetColor();
-            
             if (!File.Exists(todoFile))
             {
-                Console.WriteLine("\n");
-                Alert($"Файл не был обнаружен");
-                Console.WriteLine("> Файл будет создан автоматически после создания первой задачи.");
-                Thread.Sleep(3000);
+                tasks = new List<Task>();
                 return;
             }
 
-            string json = File.ReadAllText(todoFile, Encoding.Unicode);
-            tasks = JsonConvert.DeserializeObject<List<Task>>(json) ?? new List<Task>();
-            Console.WriteLine();
-            Console.WriteLine($"Загружено задач: {tasks.Count}");
-            Thread.Sleep(600);
+            try
+            {
+                string json = File.ReadAllText(todoFile, Encoding.Unicode);
+                var deserializedTasks = JsonConvert.DeserializeObject<List<Task>>(json);
+                
+                tasks = deserializedTasks ?? new List<Task>();
+            }
+            catch (Exception)
+            {
+                tasks = new List<Task>();
+            }
         }
 
 
         static void Main(string[] args)
-        {
-            Setup();
-            
+        { 
             Program program = new Program();
+            program.Setup();
             program.LoadTasks();
             program.Menu();
         }

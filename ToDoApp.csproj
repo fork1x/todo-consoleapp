@@ -5,11 +5,11 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <ApplicationIcon>ico\todo16.ico</ApplicationIcon>
+    <ApplicationIcon>ico\ico.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="ico\todo16.ico" />
+    <Content Include="ico\ico.ico" />
   </ItemGroup>
 
   <ItemGroup>
